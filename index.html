@@ -7,13 +7,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- 
-        Chosen Palette: Warm Neutrals (Slate, Zinc, Stone)
-        Application Structure Plan: A single-page, top-down narrative structure. It starts with a strong hero section for immediate impact, followed by an interactive timeline for career progression. A filterable project gallery allows users to explore relevant work, and a skills section with a radar chart provides a quick visual assessment. This flow is designed to guide a recruiter from a general overview to specific, compelling details, making it more engaging than a static document.
-        Visualization & Content Choices: 
+    <!--
+        Application Structure Plan: A single-page, top-down narrative structure. The resume begins with a strong hero section for immediate impact, followed by a timeline for career progression. An interactive project gallery allows users to explore specific work, and a skills section with a radar chart provides a quick visual assessment. This design guides a recruiter from a general overview to specific, compelling details, making it more engaging than a static document.
+        Visualization & Content Choices:
         - Timeline (Education/Internships): Goal: Show progression. Method: Styled HTML/CSS. Interaction: Hover effects. Justification: Visually intuitive way to understand career path.
         - Project Cards: Goal: Showcase work. Method: HTML/CSS grid. Interaction: Click to reveal details. Justification: Allows users to self-select projects of interest without cluttering the initial view.
         - Skills Chart: Goal: Compare skill proficiency. Viz: Radar Chart. Interaction: Tooltips on hover. Justification: A radar chart is excellent for showing strengths across multiple categories in a single, easy-to-digest graphic. Library: Chart.js.
+        - All content and interaction logic is handled by vanilla JavaScript, with data stored in a central JSON object for easy modification.
+        - NEW: Integrated Gemini API calls for generating summaries, adding a powerful, dynamic layer to the resume content.
         CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
     -->
     <style>
@@ -60,6 +61,52 @@
                 height: 400px;
             }
         }
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 0.75rem;
+            width: 90%;
+            max-width: 700px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            animation: fadeIn 0.3s ease-out;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+        .close-button {
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            color: #64748b;
+        }
+        .close-button:hover {
+            color: #0f172a;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -98,7 +145,7 @@
                     Final-year B.Tech (IT) student with a passion for building secure and efficient systems. Experienced in firewall implementation, vulnerability scanning, and web development, with a strong foundation in computer networks, operating systems, and automation.
                 </p>
                 <div class="mt-8 flex justify-center md:justify-start space-x-4">
-                    <a href="mailto:vivekrautela49@gmail.com" class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition">Get In Touch</a>
+                    <button id="generate-summary-btn" class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition">Generate Professional Summary ✨</button>
                     <a href="#projects" class="bg-white text-slate-700 font-bold py-3 px-6 rounded-lg border border-slate-300 hover:bg-slate-100 transition">View My Work</a>
                 </div>
             </div>
@@ -110,45 +157,14 @@
             <div class="max-w-4xl mx-auto grid md:grid-cols-2 gap-12">
                 <div>
                     <h3 class="text-2xl font-bold mb-6 text-slate-800">Internships</h3>
-                    <div class="relative border-l-2 border-indigo-200 pl-6 space-y-10">
-                        <div class="timeline-item">
-                            <h4 class="font-bold text-lg text-slate-900">Networking Trainee</h4>
-                            <p class="font-medium text-slate-600">Solitaire Infosys Pvt. Ltd. | Mohali, India</p>
-                            <p class="text-sm text-slate-500">June 2024 - July 2024</p>
-                            <ul class="mt-2 list-disc list-inside text-slate-600">
-                                <li>Simulated complex network topologies and routing protocols.</li>
-                                <li>Built a demonstration project showcasing advanced routing mechanisms.</li>
-                            </ul>
-                        </div>
-                        <div class="timeline-item">
-                            <h4 class="font-bold text-lg text-slate-900">Python Trainee</h4>
-                            <p class="font-medium text-slate-600">GNDEC Training Program | Ludhiana, India</p>
-                            <p class="text-sm text-slate-500">July 2023 - Aug 2023</p>
-                            <ul class="mt-2 list-disc list-inside text-slate-600">
-                                <li>Developed a CLI-based attendance system using Python.</li>
-                                <li>Practiced core programming principles and modular design.</li>
-                            </ul>
-                        </div>
+                    <div id="internships-list" class="relative border-l-2 border-indigo-200 pl-6 space-y-10">
+                        <!-- Internships will be injected here by JS -->
                     </div>
                 </div>
                 <div>
                     <h3 class="text-2xl font-bold mb-6 text-slate-800">Education</h3>
-                     <div class="relative border-l-2 border-indigo-200 pl-6 space-y-10">
-                        <div class="timeline-item">
-                            <h4 class="font-bold text-lg text-slate-900">B.Tech in Information Technology</h4>
-                            <p class="font-medium text-slate-600">GNDEC, Ludhiana</p>
-                            <p class="text-sm text-slate-500">2022 - 2026 | CGPA: 8.4</p>
-                        </div>
-                        <div class="timeline-item">
-                            <h4 class="font-bold text-lg text-slate-900">Senior Secondary</h4>
-                            <p class="font-medium text-slate-600">Uttarakhand Board</p>
-                            <p class="text-sm text-slate-500">2021 | Percentage: 85.0%</p>
-                        </div>
-                         <div class="timeline-item">
-                            <h4 class="font-bold text-lg text-slate-900">Matriculation</h4>
-                            <p class="font-medium text-slate-600">Uttarakhand Board</p>
-                            <p class="text-sm text-slate-500">2019 | Percentage: 85.6%</p>
-                        </div>
+                     <div id="education-list" class="relative border-l-2 border-indigo-200 pl-6 space-y-10">
+                        <!-- Education will be injected here by JS -->
                     </div>
                 </div>
             </div>
@@ -190,48 +206,88 @@
                     vivekrautela49@gmail.com
                 </a>
                 <div class="mt-10 flex justify-center space-x-6">
-                    <a href="#" class="text-slate-400 hover:text-white transition">LinkedIn</a>
-                    <a href="#" class="text-slate-400 hover:text-white transition">GitHub</a>
-                    <a href="#" class="text-slate-400 hover:text-white transition">Portfolio</a>
+                    <a href="https://linkedin.com/in/vivek-rautela-730b20259" target="_blank" class="text-slate-400 hover:text-white transition">LinkedIn</a>
+                    <a href="https://github.com/vivekrautela56" target="_blank" class="text-slate-400 hover:text-white transition">GitHub</a>
+                    <a href="https://vivekrautela56.github.io/Portfolio" target="_blank" class="text-slate-400 hover:text-white transition">Portfolio</a>
                 </div>
             </div>
         </section>
 
     </main>
 
+    <!-- Modal for generated content -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title" class="text-xl font-bold text-slate-800"></h3>
+                <span id="close-modal-btn" class="close-button">&times;</span>
+            </div>
+            <div id="modal-body" class="whitespace-pre-wrap text-slate-700"></div>
+            <div class="mt-4 text-sm text-slate-500">
+                Generated by Gemini API.
+            </div>
+        </div>
+    </div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mobile menu toggle
-            const mobileMenuButton = document.getElementById('mobile-menu-button');
-            const mobileMenu = document.getElementById('mobile-menu');
-            mobileMenuButton.addEventListener('click', () => {
-                mobileMenu.classList.toggle('hidden');
-            });
-
-            // Smooth scrolling for nav links
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    document.querySelector(this.getAttribute('href')).scrollIntoView({
-                        behavior: 'smooth'
-                    });
-                    if(mobileMenu.classList.contains('hidden') === false){
-                        mobileMenu.classList.add('hidden');
-                    }
-                });
-            });
-
-            // Project Data
-            const projects = [
+        // All resume data is stored in a single object for easy editing and management.
+        const DATA = {
+            about: "Final-year B.Tech (IT) student with a passion for building secure and efficient systems. Experienced in firewall implementation, vulnerability scanning, and web development, with a strong foundation in computer networks, operating systems, and automation.",
+            contact: {
+                email: 'vivekrautela49@gmail.com',
+                linkedin: 'https://linkedin.com/in/vivek-rautela-730b20259',
+                github: 'https://github.com/vivekrautela56',
+                portfolio: 'https://vivekrautela56.github.io/Portfolio'
+            },
+            education: [
+                {
+                    title: 'B.Tech in Information Technology',
+                    institution: 'GNDEC, Ludhiana',
+                    period: '2022 - 2026 | CGPA: 8.4',
+                },
+                {
+                    title: 'Senior Secondary',
+                    institution: 'Uttarakhand Board',
+                    period: '2021 | Percentage: 85.0%',
+                },
+                {
+                    title: 'Matriculation',
+                    institution: 'Uttarakhand Board',
+                    period: '2019 | Percentage: 85.6%',
+                }
+            ],
+            internships: [
+                {
+                    title: 'Networking Trainee',
+                    company: 'Solitaire Infosys Pvt. Ltd.',
+                    location: 'Mohali, India',
+                    period: 'June 2024 - July 2024',
+                    details: [
+                        'Simulated complex network topologies and implemented routing protocols.',
+                        'Built a demonstration project showcasing advanced routing mechanisms.',
+                    ]
+                },
+                {
+                    title: 'Python Trainee',
+                    company: 'GNDEC Training Program',
+                    location: 'Ludhiana, India',
+                    period: 'July 2023 - Aug 2023',
+                    details: [
+                        'Developed a CLI-based attendance system using Python that reduced manual entry time.',
+                        'Practiced core programming principles and modular design.',
+                    ]
+                }
+            ],
+            projects: [
                 {
                     title: 'Simple Firewall Using Python',
                     category: 'Cybersecurity',
                     date: 'July 2025 - Present',
-                    description: 'A self-initiated project to deepen my understanding of network security principles. This custom firewall actively monitors network traffic to identify and block malicious packets.',
+                    description: 'A self-initiated project to deepen my understanding of network security principles.',
                     details: [
-                        'Developed a packet sniffer with a real-time alert system using the Scapy library.',
-                        'Engineered a Flask-based dashboard for dynamic IP-blocking and visualization of live network logs.',
-                        'Demonstrated proficiency in network programming and security automation.'
+                        'Engineered a real-time packet sniffer and alert system using the Scapy library.',
+                        'Designed and integrated a Flask-based dashboard for dynamic IP-blocking, log viewing, and filtering.',
+                        'Showcased proficiency in network programming and security automation.',
                     ],
                     tags: ['Python', 'Flask', 'Scapy', 'Cybersecurity']
                 },
@@ -239,11 +295,11 @@
                     title: 'WebShield Scanner',
                     category: 'Cybersecurity',
                     date: 'Feb 2025 - Apr 2025',
-                    description: 'An academic project focused on web application security. This tool automates vulnerability scanning to identify common security flaws.',
+                    description: 'An academic project focused on web application security.',
                     details: [
-                        'Utilized Nmap for network mapping and OWASP ZAP for comprehensive vulnerability scanning.',
-                        'Built a full-stack interface with Flask and JavaScript for managing scans and viewing reports.',
-                        'Gained practical experience in identifying and mitigating web-based threats.'
+                        'Utilized Nmap and OWASP ZAP to detect vulnerabilities, streamlining the security analysis process.',
+                        'Built a full-stack interface for scan management, control, and PDF reporting.',
+                        'Gained practical experience in identifying and mitigating web-based threats.',
                     ],
                     tags: ['Python', 'Flask', 'Nmap', 'OWASP ZAP', 'JavaScript']
                 },
@@ -251,31 +307,187 @@
                     title: 'IoT Home Automation',
                     category: 'IoT',
                     date: 'Oct 2024 - Dec 2024',
-                    description: 'An academic project exploring the Internet of Things. This system allows for remote control of home appliances via a mobile application.',
+                    description: 'An academic project exploring the Internet of Things, allowing remote control of home appliances.',
                     details: [
-                        'Controlled home appliances using an ESP8266 microcontroller.',
+                        'Controlled home appliances using an ESP8266 microcontroller and sensors.',
                         'Integrated with the Blynk mobile app for a user-friendly control interface.',
                         'Explored hardware-software integration and real-time data communication.'
                     ],
                     tags: ['IoT', 'ESP8266', 'Blynk', 'C++']
                 },
                 {
-                    title: 'E-Library System',
+                    title: 'E-Library Management System',
                     category: 'Web Development',
                     date: 'Sep 2023 - Oct 2023',
                     description: 'An academic project to create a functional digital library management system.',
                     details: [
-                        'Implemented core features like user login, book issuing, and returns.',
+                        'Engineered a full-stack e-library system with user login, book search, and lending features.',
                         'Designed a MySQL database schema to manage user and book data efficiently.',
-                        'Built the frontend interface using HTML, CSS, and JavaScript for a responsive user experience.'
+                        'Built a frontend interface using HTML, CSS, and JavaScript for a responsive user experience.'
                     ],
                     tags: ['HTML', 'CSS', 'JavaScript', 'MySQL']
                 }
-            ];
+            ],
+            skills: {
+                'Languages': ['Python', 'Java', 'C++', 'SQL'],
+                'Web': ['HTML', 'CSS', 'JavaScript', 'Flask'],
+                'Cybersecurity': ['Nmap', 'OWASP ZAP', 'Scapy'],
+                'Tools & Libraries': ['Git', 'Linux', 'Pandas', 'NumPy']
+            },
+            skillsChartData: {
+                labels: ['Python', 'Cybersecurity', 'Backend Dev', 'Networking', 'Databases', 'Frontend'],
+                data: [90, 85, 80, 75, 70, 65]
+            }
+        };
 
-            // Populate Projects
+        // --- GEMINI API INTEGRATION ---
+        async function generateText(prompt) {
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+            const payload = { contents: chatHistory };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            let response;
+            let retryCount = 0;
+            const maxRetries = 5;
+            const initialDelay = 1000;
+
+            while (retryCount < maxRetries) {
+                try {
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.status === 429) {
+                        retryCount++;
+                        const delay = initialDelay * Math.pow(2, retryCount);
+                        await new Promise(res => setTimeout(res, delay));
+                        continue;
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        return result.candidates[0].content.parts[0].text;
+                    } else {
+                        throw new Error("Invalid API response format");
+                    }
+                } catch (error) {
+                    console.error("Fetch error:", error);
+                    return "An error occurred while generating the summary. Please try again.";
+                }
+            }
+            return "Too many requests. Please try again later.";
+        }
+
+        // Functions to handle modal display
+        function showModal(title, content) {
+            const modal = document.getElementById('modal');
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-body').textContent = content;
+            modal.style.display = 'flex';
+        }
+
+        function hideModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        // Main event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            initMobileMenu();
+            initSmoothScrolling();
+            renderEducationAndExperience();
+            renderProjects();
+            renderSkillsList();
+            renderSkillsChart();
+
+            // Add event listener for the professional summary button
+            const generateSummaryBtn = document.getElementById('generate-summary-btn');
+            generateSummaryBtn.addEventListener('click', async () => {
+                generateSummaryBtn.textContent = 'Generating...';
+                generateSummaryBtn.disabled = true;
+
+                const skillsList = Object.values(DATA.skills).flat().join(', ');
+                const prompt = `Based on the following resume content, generate a concise professional summary (2-3 sentences) suitable for a resume or LinkedIn profile.
+                
+                Experience: ${DATA.internships.map(i => `${i.title} at ${i.company}: ${i.details.join(' ')}`).join('. ')}
+                Projects: ${DATA.projects.map(p => `${p.title}: ${p.details.join(' ')}`).join('. ')}
+                Skills: ${skillsList}
+                
+                Professional Summary:`;
+
+                const summary = await generateText(prompt);
+                showModal('Generated Professional Summary', summary);
+                generateSummaryBtn.textContent = 'Generate Professional Summary ✨';
+                generateSummaryBtn.disabled = false;
+            });
+        });
+
+        // Function to initialize mobile menu toggle
+        function initMobileMenu() {
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+        }
+
+        // Function to initialize smooth scrolling for navigation links
+        function initSmoothScrolling() {
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                    const mobileMenu = document.getElementById('mobile-menu');
+                    if (!mobileMenu.classList.contains('hidden')) {
+                        mobileMenu.classList.add('hidden');
+                    }
+                });
+            });
+        }
+
+        // Function to dynamically render education and internship timelines
+        function renderEducationAndExperience() {
+            const internshipsList = document.getElementById('internships-list');
+            const educationList = document.getElementById('education-list');
+
+            // Render Internships
+            internshipsList.innerHTML = DATA.internships.map(item => `
+                <div class="timeline-item">
+                    <h4 class="font-bold text-lg text-slate-900">${item.title}</h4>
+                    <p class="font-medium text-slate-600">${item.company} | ${item.location}</p>
+                    <p class="text-sm text-slate-500">${item.period}</p>
+                    <ul class="mt-2 list-disc list-inside text-slate-600">
+                        ${item.details.map(detail => `<li>${detail}</li>`).join('')}
+                    </ul>
+                </div>
+            `).join('');
+
+            // Render Education
+            educationList.innerHTML = DATA.education.map(item => `
+                <div class="timeline-item">
+                    <h4 class="font-bold text-lg text-slate-900">${item.title}</h4>
+                    <p class="font-medium text-slate-600">${item.institution}</p>
+                    <p class="text-sm text-slate-500">${item.period}</p>
+                </div>
+            `).join('');
+        }
+
+
+        // Function to dynamically render project cards and add Gemini functionality
+        function renderProjects() {
             const projectGallery = document.getElementById('project-gallery');
-            projectGallery.innerHTML = projects.map(p => `
+            projectGallery.innerHTML = DATA.projects.map((p, index) => `
                 <div class="project-card bg-slate-50 rounded-xl p-6 cursor-pointer border border-slate-200">
                     <div class="flex justify-between items-start">
                         <h3 class="font-bold text-xl mb-2 text-slate-800">${p.title}</h3>
@@ -289,47 +501,67 @@
                         <ul class="list-disc list-inside space-y-2 text-slate-600">
                             ${p.details.map(detail => `<li>${detail}</li>`).join('')}
                         </ul>
+                        <button class="generate-project-summary-btn mt-4 bg-indigo-500 text-white text-sm font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition" data-project-index="${index}">Generate Summary ✨</button>
                     </div>
                 </div>
             `).join('');
 
-            // Project card click interaction
+            // Add click listener to project cards to toggle details
             document.querySelectorAll('.project-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    card.querySelector('.project-details').classList.toggle('hidden');
+                card.addEventListener('click', (event) => {
+                    if (event.target.tagName !== 'BUTTON') {
+                        card.querySelector('.project-details').classList.toggle('hidden');
+                    }
                 });
             });
 
-            // Skills Data
-            const skillsData = {
-                'Languages': ['Python', 'Java', 'C++', 'SQL'],
-                'Web': ['HTML', 'CSS', 'JavaScript', 'Flask'],
-                'Cybersecurity': ['Nmap', 'OWASP ZAP', 'Scapy'],
-                'Tools & Libraries': ['Git', 'Linux', 'Pandas', 'NumPy']
-            };
+            // Add click listener for project summary buttons
+            document.querySelectorAll('.generate-project-summary-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const index = e.target.dataset.projectIndex;
+                    const project = DATA.projects[index];
+                    e.target.textContent = 'Generating...';
+                    e.target.disabled = true;
 
-            // Populate Skills List
+                    const prompt = `Based on the following project description, generate a concise, one-paragraph summary.
+                    
+                    Project Title: ${project.title}
+                    Details: ${project.details.join(' ')}
+                    Technologies: ${project.tags.join(', ')}
+                    
+                    Summary:`;
+
+                    const summary = await generateText(prompt);
+                    showModal(`Summary for ${project.title}`, summary);
+                    e.target.textContent = 'Generate Summary ✨';
+                    e.target.disabled = false;
+                });
+            });
+        }
+
+        // Function to dynamically render the skills list
+        function renderSkillsList() {
             const skillsList = document.getElementById('skills-list');
-            Object.entries(skillsData).forEach(([category, skills]) => {
-                const categoryDiv = document.createElement('div');
-                categoryDiv.innerHTML = `
+            skillsList.innerHTML = Object.entries(DATA.skills).map(([category, skills]) => `
+                <div>
                     <h4 class="font-bold text-lg text-slate-800 mb-2">${category}</h4>
                     <div class="flex flex-wrap gap-2">
                         ${skills.map(skill => `<span class="bg-indigo-100 text-indigo-800 text-sm font-medium px-3 py-1 rounded-full">${skill}</span>`).join('')}
                     </div>
-                `;
-                skillsList.appendChild(categoryDiv);
-            });
+                </div>
+            `).join('');
+        }
 
-            // Skills Chart
+        // Function to render the skills radar chart
+        function renderSkillsChart() {
             const ctx = document.getElementById('skillsChart').getContext('2d');
             const skillsChart = new Chart(ctx, {
                 type: 'radar',
                 data: {
-                    labels: ['Python', 'Cybersecurity', 'Backend Dev', 'Networking', 'Databases', 'Frontend'],
+                    labels: DATA.skillsChartData.labels,
                     datasets: [{
                         label: 'Proficiency',
-                        data: [90, 85, 80, 75, 70, 65],
+                        data: DATA.skillsChartData.data,
                         backgroundColor: 'rgba(79, 70, 229, 0.2)',
                         borderColor: 'rgba(79, 70, 229, 1)',
                         borderWidth: 2,
@@ -344,17 +576,10 @@
                     maintainAspectRatio: false,
                     scales: {
                         r: {
-                            angleLines: {
-                                color: 'rgba(0, 0, 0, 0.1)'
-                            },
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.1)'
-                            },
+                            angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' },
                             pointLabels: {
-                                font: {
-                                    size: 14,
-                                    weight: 'bold'
-                                },
+                                font: { size: 14, weight: 'bold' },
                                 color: '#1e293b'
                             },
                             ticks: {
@@ -367,9 +592,7 @@
                         }
                     },
                     plugins: {
-                        legend: {
-                            display: false
-                        },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
@@ -380,7 +603,16 @@
                     }
                 }
             });
-        });
+
+            // Close modal with X button or by clicking outside
+            const modal = document.getElementById('modal');
+            document.getElementById('close-modal-btn').addEventListener('click', hideModal);
+            window.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    hideModal();
+                }
+            });
+        }
     </script>
 </body>
 </html>
