@@ -7,16 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <!--
-        Application Structure Plan: A single-page, top-down narrative structure. The resume begins with a strong hero section for immediate impact, followed by a timeline for career progression. An interactive project gallery allows users to explore specific work, and a skills section with a radar chart provides a quick visual assessment. This design guides a recruiter from a general overview to specific, compelling details, making it more engaging than a static document.
-        Visualization & Content Choices:
-        - Timeline (Education/Internships): Goal: Show progression. Method: Styled HTML/CSS. Interaction: Hover effects. Justification: Visually intuitive way to understand career path.
-        - Project Cards: Goal: Showcase work. Method: HTML/CSS grid. Interaction: Click to reveal details. Justification: Allows users to self-select projects of interest without cluttering the initial view.
-        - Skills Chart: Goal: Compare skill proficiency. Viz: Radar Chart. Interaction: Tooltips on hover. Justification: A radar chart is excellent for showing strengths across multiple categories in a single, easy-to-digest graphic. Library: Chart.js.
-        - All content and interaction logic is handled by vanilla JavaScript, with data stored in a central JSON object for easy modification.
-        - NEW: Integrated Gemini API calls for generating summaries, adding a powerful, dynamic layer to the resume content.
-        CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
-    -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -345,10 +335,11 @@
             let chatHistory = [];
             chatHistory.push({ role: "user", parts: [{ text: prompt }] });
             const payload = { contents: chatHistory };
-            const apiKey = "";
+            const apiKey = ""; // Canvas will provide this at runtime
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
             let response;
+            let result;
             let retryCount = 0;
             const maxRetries = 5;
             const initialDelay = 1000;
@@ -369,24 +360,27 @@
                     }
 
                     if (!response.ok) {
-                        throw new Error(`API error: ${response.statusText}`);
+                        const errorData = await response.json();
+                        throw new Error(`API error: ${response.status} ${response.statusText} - ${errorData.error.message}`);
                     }
 
-                    const result = await response.json();
+                    result = await response.json();
+
                     if (result.candidates && result.candidates.length > 0 &&
                         result.candidates[0].content && result.candidates[0].content.parts &&
                         result.candidates[0].content.parts.length > 0) {
                         return result.candidates[0].content.parts[0].text;
                     } else {
-                        throw new Error("Invalid API response format");
+                        throw new Error("Invalid API response format or no content");
                     }
                 } catch (error) {
                     console.error("Fetch error:", error);
-                    return "An error occurred while generating the summary. Please try again.";
+                    return `An error occurred while generating the summary: ${error.message}`;
                 }
             }
             return "Too many requests. Please try again later.";
         }
+
 
         // Functions to handle modal display
         function showModal(title, content) {
@@ -412,22 +406,32 @@
             // Add event listener for the professional summary button
             const generateSummaryBtn = document.getElementById('generate-summary-btn');
             generateSummaryBtn.addEventListener('click', async () => {
+                const originalText = generateSummaryBtn.textContent;
                 generateSummaryBtn.textContent = 'Generating...';
                 generateSummaryBtn.disabled = true;
 
                 const skillsList = Object.values(DATA.skills).flat().join(', ');
                 const prompt = `Based on the following resume content, generate a concise professional summary (2-3 sentences) suitable for a resume or LinkedIn profile.
                 
-                Experience: ${DATA.internships.map(i => `${i.title} at ${i.company}: ${i.details.join(' ')}`).join('. ')}
-                Projects: ${DATA.projects.map(p => `${p.title}: ${p.details.join(' ')}`).join('. ')}
-                Skills: ${skillsList}
+Experience: ${DATA.internships.map(i => `${i.title} at ${i.company}: ${i.details.join(' ')}`).join('. ')}
+Projects: ${DATA.projects.map(p => `${p.title}: ${p.details.join(' ')}`).join('. ')}
+Skills: ${skillsList}
                 
-                Professional Summary:`;
+Professional Summary:`;
 
                 const summary = await generateText(prompt);
                 showModal('Generated Professional Summary', summary);
-                generateSummaryBtn.textContent = 'Generate Professional Summary ✨';
+                generateSummaryBtn.textContent = originalText;
                 generateSummaryBtn.disabled = false;
+            });
+
+            // Close modal with X button or by clicking outside
+            const modal = document.getElementById('modal');
+            document.getElementById('close-modal-btn').addEventListener('click', hideModal);
+            window.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    hideModal();
+                }
             });
         });
 
@@ -520,20 +524,21 @@
                 btn.addEventListener('click', async (e) => {
                     const index = e.target.dataset.projectIndex;
                     const project = DATA.projects[index];
+                    const originalText = e.target.textContent;
                     e.target.textContent = 'Generating...';
                     e.target.disabled = true;
 
                     const prompt = `Based on the following project description, generate a concise, one-paragraph summary.
                     
-                    Project Title: ${project.title}
-                    Details: ${project.details.join(' ')}
-                    Technologies: ${project.tags.join(', ')}
+Project Title: ${project.title}
+Details: ${project.details.join(' ')}
+Technologies: ${project.tags.join(', ')}
                     
-                    Summary:`;
+Summary:`;
 
                     const summary = await generateText(prompt);
                     showModal(`Summary for ${project.title}`, summary);
-                    e.target.textContent = 'Generate Summary ✨';
+                    e.target.textContent = originalText;
                     e.target.disabled = false;
                 });
             });
@@ -601,15 +606,6 @@
                             }
                         }
                     }
-                }
-            });
-
-            // Close modal with X button or by clicking outside
-            const modal = document.getElementById('modal');
-            document.getElementById('close-modal-btn').addEventListener('click', hideModal);
-            window.addEventListener('click', (event) => {
-                if (event.target === modal) {
-                    hideModal();
                 }
             });
         }
