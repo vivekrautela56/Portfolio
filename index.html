@@ -335,7 +335,9 @@
             let chatHistory = [];
             chatHistory.push({ role: "user", parts: [{ text: prompt }] });
             const payload = { contents: chatHistory };
-            const apiKey = ""; // Canvas will provide this at runtime
+            // IMPORTANT: Replace "YOUR_API_KEY_HERE" with your actual Gemini API key.
+            // You can get a key from Google AI Studio at https://aistudio.google.com/
+            const apiKey = "YOUR_API_KEY_HERE"; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
             let response;
